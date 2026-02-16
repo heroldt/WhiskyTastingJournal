@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Whisky glass icon -->
+    <path
+        android:fillColor="#8B4F00"
+        android:pathData="M54,30 L54,45 C54,45 42,48 42,60 C42,72 48,75 54,75 C60,75 66,72 66,60 C66,48 54,45 54,45 L54,30 Z" />
+    <path
+        android:fillColor="#FFB870"
+        android:pathData="M48,55 C48,55 50,52 54,52 C58,52 60,55 60,55 C60,65 58,70 54,70 C50,70 48,65 48,55 Z" />
+    <path
+        android:fillColor="#8B4F00"
+        android:pathData="M46,75 L62,75 L62,78 L46,78 Z" />
+    <path
+        android:fillColor="#8B4F00"
+        android:pathData="M44,78 L64,78 L64,80 L44,80 Z" />
+</vector>
