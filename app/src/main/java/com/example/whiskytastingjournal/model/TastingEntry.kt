@@ -1,23 +1,33 @@
 package com.example.whiskytastingjournal.model
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Ignore
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 import java.util.UUID
 
-@Entity(tableName = "tastings")
+@Entity(
+    tableName = "tastings",
+    foreignKeys = [
+        ForeignKey(
+            entity = Whisky::class,
+            parentColumns = ["id"],
+            childColumns = ["whiskyId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("whiskyId")]
+)
 data class TastingEntry(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
-    val distillery: String = "",
-    val country: String = "",
-    val region: String = "",
-    val whiskyName: String = "",
+    val whiskyId: String = "",
     val date: LocalDate = LocalDate.now(),
-    val price: String = "",
-    val batchCode: String = "",
+    val alias: String = "",
     val notes: String = "",
+    val price: String = "",
     val sweetness: Float = 0f,
     val smokiness: Float = 0f,
     val fruitiness: Float = 0f,

@@ -15,8 +15,14 @@ interface TastingDao {
     @Query("SELECT * FROM tastings ORDER BY date DESC")
     fun getAllTastings(): Flow<List<TastingEntry>>
 
+    @Query("SELECT * FROM tastings WHERE whiskyId = :whiskyId ORDER BY date DESC")
+    fun getTastingsByWhiskyId(whiskyId: String): Flow<List<TastingEntry>>
+
     @Query("SELECT * FROM tastings WHERE id = :id")
     suspend fun getTastingById(id: String): TastingEntry?
+
+    @Query("SELECT * FROM tastings WHERE whiskyId = :whiskyId AND date = :date AND alias = :alias LIMIT 1")
+    suspend fun findByWhiskyDateAlias(whiskyId: String, date: String, alias: String): TastingEntry?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(tasting: TastingEntry)

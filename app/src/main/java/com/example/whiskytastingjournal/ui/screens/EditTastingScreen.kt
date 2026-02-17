@@ -15,6 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -41,13 +43,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.whiskytastingjournal.model.Distillery
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.ui.TastingViewModel
-import com.example.whiskytastingjournal.ui.components.DistilleryField
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -61,20 +60,13 @@ fun EditTastingScreen(
     onSaved: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val context = LocalContext.current
-    val allDistilleries = remember { Distillery.loadAll(context) }
-
     var loaded by remember { mutableStateOf(false) }
     var originalEntry by remember { mutableStateOf<TastingEntry?>(null) }
 
-    var distillery by remember { mutableStateOf("") }
-    var country by remember { mutableStateOf("") }
-    var region by remember { mutableStateOf("") }
-    var whiskyName by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var price by remember { mutableStateOf("") }
-    var batchCode by remember { mutableStateOf("") }
+    var alias by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
 
     var sweetness by remember { mutableFloatStateOf(5f) }
     var smokiness by remember { mutableFloatStateOf(5f) }
@@ -84,19 +76,16 @@ fun EditTastingScreen(
     var finish by remember { mutableFloatStateOf(5f) }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
 
     LaunchedEffect(tastingId) {
         viewModel.getTastingById(tastingId)?.let { entry ->
             originalEntry = entry
-            distillery = entry.distillery
-            country = entry.country
-            region = entry.region
-            whiskyName = entry.whiskyName
             selectedDate = entry.date
-            price = entry.price
-            batchCode = entry.batchCode
+            alias = entry.alias
             notes = entry.notes
+            price = entry.price
             sweetness = entry.sweetness
             smokiness = entry.smokiness
             fruitiness = entry.fruitiness
@@ -116,10 +105,16 @@ fun EditTastingScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete tasting")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         }
@@ -142,35 +137,7 @@ fun EditTastingScreen(
             ) {
                 Spacer(modifier = Modifier.height(4.dp))
 
-                SectionLabel("Bottle Details")
-
-                DistilleryField(
-                    value = distillery,
-                    onValueChange = { distillery = it },
-                    onDistillerySelected = { d ->
-                        distillery = d.name
-                        country = d.country
-                        region = d.region
-                    },
-                    distilleries = allDistilleries
-                )
-
-                if (country.isNotBlank()) {
-                    Text(
-                        text = "$region, $country",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-
-                OutlinedTextField(
-                    value = whiskyName,
-                    onValueChange = { whiskyName = it },
-                    label = { Text("Whisky Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                SectionLabel("Tasting Details")
 
                 OutlinedTextField(
                     value = selectedDate.format(dateFormatter),
@@ -185,27 +152,23 @@ fun EditTastingScreen(
                     }
                 )
 
-                Row(
+                OutlinedTextField(
+                    value = alias,
+                    onValueChange = { alias = it },
+                    label = { Text("Alias (optional, e.g. \"Whiskey Fair 2023\")") },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = price,
-                        onValueChange = { price = it },
-                        label = { Text("Price") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        prefix = { Text("$") }
-                    )
-                    OutlinedTextField(
-                        value = batchCode,
-                        onValueChange = { batchCode = it },
-                        label = { Text("Batch/Bottle Code") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Price") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    prefix = { Text("$") }
+                )
 
                 Spacer(modifier = Modifier.height(4.dp))
                 SectionLabel("Tasting Notes")
@@ -247,14 +210,10 @@ fun EditTastingScreen(
                             originalEntry?.let { orig ->
                                 viewModel.updateTasting(
                                     orig.copy(
-                                        distillery = distillery,
-                                        country = country,
-                                        region = region,
-                                        whiskyName = whiskyName,
                                         date = selectedDate,
-                                        price = price,
-                                        batchCode = batchCode,
+                                        alias = alias,
                                         notes = notes,
+                                        price = price,
                                         sweetness = sweetness,
                                         smokiness = smokiness,
                                         fruitiness = fruitiness,
@@ -266,8 +225,7 @@ fun EditTastingScreen(
                             }
                             onSaved()
                         },
-                        modifier = Modifier.weight(1f),
-                        enabled = distillery.isNotBlank() && whiskyName.isNotBlank()
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text("Save")
                     }
@@ -303,6 +261,28 @@ fun EditTastingScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Tasting") },
+            text = { Text("Are you sure you want to delete this tasting? This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    originalEntry?.let { viewModel.deleteTasting(it) }
+                    showDeleteDialog = false
+                    onSaved()
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

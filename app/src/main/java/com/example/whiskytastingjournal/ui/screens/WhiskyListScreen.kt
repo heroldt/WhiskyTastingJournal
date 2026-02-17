@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.WineBar
@@ -45,19 +44,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.whiskytastingjournal.model.TastingEntry
+import com.example.whiskytastingjournal.model.WhiskyWithTastings
 import com.example.whiskytastingjournal.ui.SortOption
 import com.example.whiskytastingjournal.ui.TastingViewModel
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TastingListScreen(
+fun WhiskyListScreen(
     viewModel: TastingViewModel,
-    onAddTasting: () -> Unit,
-    onTastingClick: (String) -> Unit
+    onAddWhisky: () -> Unit,
+    onWhiskyClick: (String) -> Unit
 ) {
-    val tastings by viewModel.tastings.collectAsState()
+    val whiskies by viewModel.whiskiesWithTastings.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortOption by viewModel.sortOption.collectAsState()
 
@@ -114,11 +113,11 @@ fun TastingListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onAddTasting,
+                onClick = onAddWhisky,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add tasting")
+                Icon(Icons.Default.Add, contentDescription = "Add whisky")
             }
         }
     ) { padding ->
@@ -127,7 +126,6 @@ fun TastingListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Search bar
             if (showSearchBar) {
                 OutlinedTextField(
                     value = searchQuery,
@@ -135,7 +133,7 @@ fun TastingListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search by name or distillery...") },
+                    placeholder = { Text("Search by name, distillery, or region...") },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null)
                     },
@@ -143,7 +141,7 @@ fun TastingListScreen(
                 )
             }
 
-            if (tastings.isEmpty()) {
+            if (whiskies.isEmpty()) {
                 EmptyState()
             } else {
                 LazyColumn(
@@ -153,10 +151,10 @@ fun TastingListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
-                    items(tastings, key = { it.id }) { tasting ->
-                        TastingCard(
-                            entry = tasting,
-                            onClick = { onTastingClick(tasting.id) }
+                    items(whiskies, key = { it.whisky.id }) { whiskyWithTastings ->
+                        WhiskyCard(
+                            whiskyWithTastings = whiskyWithTastings,
+                            onClick = { onWhiskyClick(whiskyWithTastings.whisky.id) }
                         )
                     }
                 }
@@ -166,8 +164,12 @@ fun TastingListScreen(
 }
 
 @Composable
-private fun TastingCard(entry: TastingEntry, onClick: () -> Unit) {
+private fun WhiskyCard(whiskyWithTastings: WhiskyWithTastings, onClick: () -> Unit) {
+    val whisky = whiskyWithTastings.whisky
+    val tastings = whiskyWithTastings.tastings
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
+    val latestTasting = tastings.maxByOrNull { it.date }
+    val bestScore = tastings.maxOfOrNull { it.overallScore }
 
     Card(
         modifier = Modifier
@@ -190,15 +192,15 @@ private fun TastingCard(entry: TastingEntry, onClick: () -> Unit) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = entry.whiskyName,
+                        text = whisky.whiskyName,
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = if (entry.region.isNotBlank())
-                            "${entry.distillery} \u2022 ${entry.region}"
-                        else entry.distillery,
+                        text = if (whisky.region.isNotBlank())
+                            "${whisky.distillery} \u2022 ${whisky.region}"
+                        else whisky.distillery,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -206,7 +208,9 @@ private fun TastingCard(entry: TastingEntry, onClick: () -> Unit) {
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                ScoreBadge(score = entry.overallScore)
+                if (bestScore != null) {
+                    ScoreBadge(score = bestScore)
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -216,28 +220,17 @@ private fun TastingCard(entry: TastingEntry, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = entry.date.format(dateFormatter),
+                    text = "${tastings.size} tasting${if (tastings.size != 1) "s" else ""}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (entry.price.isNotBlank()) {
+                if (latestTasting != null) {
                     Text(
-                        text = "$${entry.price}",
+                        text = latestTasting.date.format(dateFormatter),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-
-            if (entry.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = entry.notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }
@@ -274,13 +267,13 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No tastings yet",
+                text = "No whiskies yet",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Tap + to record your first dram",
+                text = "Tap + to add your first bottle",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )

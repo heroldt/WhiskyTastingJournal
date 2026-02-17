@@ -1,41 +1,48 @@
 package com.example.whiskytastingjournal.repository
 
 import com.example.whiskytastingjournal.data.dao.TastingDao
+import com.example.whiskytastingjournal.data.dao.WhiskyDao
 import com.example.whiskytastingjournal.model.TastingEntry
+import com.example.whiskytastingjournal.model.Whisky
+import com.example.whiskytastingjournal.model.WhiskyWithTastings
 import kotlinx.coroutines.flow.Flow
 
-// EXTENSION POINT: Cloud Sync
-// To add Firebase or REST API sync:
-// 1. Create a RemoteDataSource interface with the same CRUD methods
-// 2. Inject it alongside the DAO: class TastingRepository(private val dao: TastingDao, private val remote: RemoteDataSource)
-// 3. On insert/update/delete, write to both local and remote
-// 4. Add a sync() method that pulls remote changes and merges with local data
-// 5. Use WorkManager for periodic background sync
+class TastingRepository(
+    private val tastingDao: TastingDao,
+    private val whiskyDao: WhiskyDao
+) {
 
-// EXTENSION POINT: Data Export (CSV/JSON)
-// Add export methods here that query allTastings and serialize:
-//   suspend fun exportToCsv(outputStream: OutputStream) { ... }
-//   suspend fun exportToJson(outputStream: OutputStream) { ... }
-// Call from ViewModel, use Intent.ACTION_CREATE_DOCUMENT to let user pick save location
+    // Whisky operations
+    val allWhiskiesWithTastings: Flow<List<WhiskyWithTastings>> = whiskyDao.getAllWhiskiesWithTastings()
 
-// EXTENSION POINT: AI Analysis
-// To add automatic flavor extraction from tasting notes:
-// 1. Create an AnalysisService that sends entry.notes to an LLM API
-// 2. Parse the response to extract flavor keywords and suggested slider values
-// 3. Call from ViewModel after save: analysisService.analyze(entry.notes)
-// 4. Present suggestions to the user for confirmation before updating sliders
+    suspend fun getWhiskyById(id: String): Whisky? = whiskyDao.getWhiskyById(id)
 
-class TastingRepository(private val dao: TastingDao) {
+    suspend fun getWhiskyWithTastings(id: String): WhiskyWithTastings? = whiskyDao.getWhiskyWithTastings(id)
 
-    val allTastings: Flow<List<TastingEntry>> = dao.getAllTastings()
+    suspend fun insertWhisky(whisky: Whisky) = whiskyDao.insert(whisky)
 
-    suspend fun getById(id: String): TastingEntry? = dao.getTastingById(id)
+    suspend fun updateWhisky(whisky: Whisky) = whiskyDao.update(whisky)
 
-    suspend fun insert(tasting: TastingEntry) = dao.insert(tasting)
+    suspend fun deleteWhisky(whisky: Whisky) = whiskyDao.delete(whisky)
 
-    suspend fun update(tasting: TastingEntry) = dao.update(tasting)
+    suspend fun deleteWhiskyById(id: String) = whiskyDao.deleteById(id)
 
-    suspend fun delete(tasting: TastingEntry) = dao.delete(tasting)
+    // Tasting operations
+    val allTastings: Flow<List<TastingEntry>> = tastingDao.getAllTastings()
 
-    suspend fun deleteById(id: String) = dao.deleteById(id)
+    fun getTastingsByWhiskyId(whiskyId: String): Flow<List<TastingEntry>> =
+        tastingDao.getTastingsByWhiskyId(whiskyId)
+
+    suspend fun getTastingById(id: String): TastingEntry? = tastingDao.getTastingById(id)
+
+    suspend fun findDuplicateTasting(whiskyId: String, date: String, alias: String): TastingEntry? =
+        tastingDao.findByWhiskyDateAlias(whiskyId, date, alias)
+
+    suspend fun insertTasting(tasting: TastingEntry) = tastingDao.insert(tasting)
+
+    suspend fun updateTasting(tasting: TastingEntry) = tastingDao.update(tasting)
+
+    suspend fun deleteTasting(tasting: TastingEntry) = tastingDao.delete(tasting)
+
+    suspend fun deleteTastingById(id: String) = tastingDao.deleteById(id)
 }

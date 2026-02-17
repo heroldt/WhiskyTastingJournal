@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.whiskytastingjournal.model.TastingEntry
+import com.example.whiskytastingjournal.model.Whisky
+import com.example.whiskytastingjournal.model.WhiskyWithTastings
 import com.example.whiskytastingjournal.repository.TastingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,26 +32,34 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
     val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
-    val tastings: StateFlow<List<TastingEntry>> =
-        combine(repository.allTastings, _searchQuery, _sortOption) { list, query, sort ->
+    val whiskiesWithTastings: StateFlow<List<WhiskyWithTastings>> =
+        combine(repository.allWhiskiesWithTastings, _searchQuery, _sortOption) { list, query, sort ->
             list
-                .filter { entry ->
+                .filter { wt ->
                     if (query.isBlank()) true
                     else {
                         val q = query.lowercase()
-                        entry.whiskyName.lowercase().contains(q) ||
-                            entry.distillery.lowercase().contains(q) ||
-                            entry.notes.lowercase().contains(q)
+                        wt.whisky.whiskyName.lowercase().contains(q) ||
+                            wt.whisky.distillery.lowercase().contains(q) ||
+                            wt.whisky.region.lowercase().contains(q)
                     }
                 }
                 .let { filtered ->
                     when (sort) {
-                        SortOption.DATE_DESC -> filtered.sortedByDescending { it.date }
-                        SortOption.DATE_ASC -> filtered.sortedBy { it.date }
-                        SortOption.NAME_ASC -> filtered.sortedBy { it.whiskyName.lowercase() }
-                        SortOption.DISTILLERY_ASC -> filtered.sortedBy { it.distillery.lowercase() }
-                        SortOption.RATING_DESC -> filtered.sortedByDescending { it.overallScore }
-                        SortOption.RATING_ASC -> filtered.sortedBy { it.overallScore }
+                        SortOption.DATE_DESC -> filtered.sortedByDescending { wt ->
+                            wt.tastings.maxOfOrNull { it.date }
+                        }
+                        SortOption.DATE_ASC -> filtered.sortedBy { wt ->
+                            wt.tastings.minOfOrNull { it.date }
+                        }
+                        SortOption.NAME_ASC -> filtered.sortedBy { it.whisky.whiskyName.lowercase() }
+                        SortOption.DISTILLERY_ASC -> filtered.sortedBy { it.whisky.distillery.lowercase() }
+                        SortOption.RATING_DESC -> filtered.sortedByDescending { wt ->
+                            wt.tastings.maxOfOrNull { it.overallScore } ?: 0f
+                        }
+                        SortOption.RATING_ASC -> filtered.sortedBy { wt ->
+                            wt.tastings.minOfOrNull { it.overallScore } ?: 0f
+                        }
                     }
                 }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -62,19 +72,44 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
         _sortOption.value = option
     }
 
+    // Whisky CRUD
+    fun addWhisky(whisky: Whisky) {
+        viewModelScope.launch { repository.insertWhisky(whisky) }
+    }
+
+    fun updateWhisky(whisky: Whisky) {
+        viewModelScope.launch { repository.updateWhisky(whisky) }
+    }
+
+    fun deleteWhisky(whisky: Whisky) {
+        viewModelScope.launch { repository.deleteWhisky(whisky) }
+    }
+
+    fun deleteWhiskyById(id: String) {
+        viewModelScope.launch { repository.deleteWhiskyById(id) }
+    }
+
+    suspend fun getWhiskyById(id: String): Whisky? = repository.getWhiskyById(id)
+
+    suspend fun getWhiskyWithTastings(id: String): WhiskyWithTastings? = repository.getWhiskyWithTastings(id)
+
+    // Tasting CRUD
     fun addTasting(entry: TastingEntry) {
-        viewModelScope.launch { repository.insert(entry) }
+        viewModelScope.launch { repository.insertTasting(entry) }
     }
 
     fun updateTasting(entry: TastingEntry) {
-        viewModelScope.launch { repository.update(entry) }
+        viewModelScope.launch { repository.updateTasting(entry) }
     }
 
     fun deleteTasting(entry: TastingEntry) {
-        viewModelScope.launch { repository.delete(entry) }
+        viewModelScope.launch { repository.deleteTasting(entry) }
     }
 
-    suspend fun getTastingById(id: String): TastingEntry? = repository.getById(id)
+    suspend fun getTastingById(id: String): TastingEntry? = repository.getTastingById(id)
+
+    suspend fun findDuplicateTasting(whiskyId: String, date: String, alias: String): TastingEntry? =
+        repository.findDuplicateTasting(whiskyId, date, alias)
 
     class Factory(private val repository: TastingRepository) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
