@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.whiskytastingjournal.model.Distillery
 import com.example.whiskytastingjournal.model.Whisky
@@ -58,6 +60,8 @@ fun EditWhiskyScreen(
     var region by remember { mutableStateOf("") }
     var whiskyName by remember { mutableStateOf("") }
     var batchCode by remember { mutableStateOf("") }
+    var ageStr by remember { mutableStateOf("") }
+    var bottlingYearStr by remember { mutableStateOf("") }
 
     LaunchedEffect(whiskyId) {
         viewModel.getWhiskyById(whiskyId)?.let { whisky ->
@@ -67,6 +71,8 @@ fun EditWhiskyScreen(
             region = whisky.region
             whiskyName = whisky.whiskyName
             batchCode = whisky.batchCode
+            ageStr = whisky.age?.toString() ?: ""
+            bottlingYearStr = whisky.bottlingYear?.toString() ?: ""
             loaded = true
         }
     }
@@ -149,6 +155,31 @@ fun EditWhiskyScreen(
                     singleLine = true
                 )
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = ageStr,
+                        onValueChange = { ageStr = it.filter { c -> c.isDigit() } },
+                        label = { Text("Age (years)") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        suffix = { Text("yo") },
+                        placeholder = { Text("optional") }
+                    )
+                    OutlinedTextField(
+                        value = bottlingYearStr,
+                        onValueChange = { bottlingYearStr = it.filter { c -> c.isDigit() } },
+                        label = { Text("Bottling Year") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        placeholder = { Text("optional") }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
@@ -171,7 +202,9 @@ fun EditWhiskyScreen(
                                         country = country,
                                         region = region,
                                         whiskyName = whiskyName,
-                                        batchCode = batchCode
+                                        batchCode = batchCode,
+                                        age = ageStr.toIntOrNull(),
+                                        bottlingYear = bottlingYearStr.toIntOrNull()
                                     )
                                 )
                             }

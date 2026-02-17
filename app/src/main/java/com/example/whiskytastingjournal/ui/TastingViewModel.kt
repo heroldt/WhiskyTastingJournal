@@ -3,6 +3,8 @@ package com.example.whiskytastingjournal.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.whiskytastingjournal.model.AromaTag
+import com.example.whiskytastingjournal.model.TastingAroma
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.Whisky
 import com.example.whiskytastingjournal.model.WhiskyWithTastings
@@ -32,6 +34,13 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
     val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
+    val aromaTags: StateFlow<List<AromaTag>> = repository.allAromaTags
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch { repository.seedAromaTagsIfEmpty() }
+    }
+
     val whiskiesWithTastings: StateFlow<List<WhiskyWithTastings>> =
         combine(repository.allWhiskiesWithTastings, _searchQuery, _sortOption) { list, query, sort ->
             list
@@ -55,10 +64,10 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
                         SortOption.NAME_ASC -> filtered.sortedBy { it.whisky.whiskyName.lowercase() }
                         SortOption.DISTILLERY_ASC -> filtered.sortedBy { it.whisky.distillery.lowercase() }
                         SortOption.RATING_DESC -> filtered.sortedByDescending { wt ->
-                            wt.tastings.maxOfOrNull { it.overallScore } ?: 0f
+                            wt.tastings.maxOfOrNull { it.effectiveOverallScore } ?: 0f
                         }
                         SortOption.RATING_ASC -> filtered.sortedBy { wt ->
-                            wt.tastings.minOfOrNull { it.overallScore } ?: 0f
+                            wt.tastings.minOfOrNull { it.effectiveOverallScore } ?: 0f
                         }
                     }
                 }
@@ -72,7 +81,7 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
         _sortOption.value = option
     }
 
-    // Whisky CRUD
+    // --- Whisky CRUD ---
     fun addWhisky(whisky: Whisky) {
         viewModelScope.launch { repository.insertWhisky(whisky) }
     }
@@ -93,7 +102,7 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
 
     suspend fun getWhiskyWithTastings(id: String): WhiskyWithTastings? = repository.getWhiskyWithTastings(id)
 
-    // Tasting CRUD
+    // --- Tasting CRUD ---
     fun addTasting(entry: TastingEntry) {
         viewModelScope.launch { repository.insertTasting(entry) }
     }
@@ -110,6 +119,19 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
 
     suspend fun findDuplicateTasting(whiskyId: String, date: String, alias: String): TastingEntry? =
         repository.findDuplicateTasting(whiskyId, date, alias)
+
+    // --- Tasting + Aromas combined save ---
+    fun saveTastingWithAromas(tasting: TastingEntry, aromas: List<TastingAroma>) {
+        viewModelScope.launch { repository.saveTastingWithAromas(tasting, aromas) }
+    }
+
+    fun updateTastingWithAromas(tasting: TastingEntry, aromas: List<TastingAroma>) {
+        viewModelScope.launch { repository.updateTastingWithAromas(tasting, aromas) }
+    }
+
+    // --- Aroma queries ---
+    suspend fun getAromasForTasting(tastingId: String): List<TastingAroma> =
+        repository.getAromasForTasting(tastingId)
 
     class Factory(private val repository: TastingRepository) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

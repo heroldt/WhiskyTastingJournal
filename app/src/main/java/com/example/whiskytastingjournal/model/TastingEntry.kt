@@ -26,8 +26,22 @@ data class TastingEntry(
     val whiskyId: String = "",
     val date: LocalDate = LocalDate.now(),
     val alias: String = "",
-    val notes: String = "",
     val price: String = "",
+
+    // --- New rating fields (1–10 scale) ---
+    val noseScore: Float = 5f,
+    val palateScore: Float = 5f,
+    val finishScore: Float = 5f,
+    val overallScoreAuto: Float = 5f,
+    val overallScoreUser: Float? = null,
+
+    // --- Per-sense free-text notes ---
+    val noseNotes: String? = null,
+    val palateNotes: String? = null,
+    val finishNotes: String? = null,
+
+    // --- Legacy columns kept for migration compat (unused in new UI) ---
+    val notes: String = "",
     val sweetness: Float = 0f,
     val smokiness: Float = 0f,
     val fruitiness: Float = 0f,
@@ -36,19 +50,14 @@ data class TastingEntry(
     val finish: Float = 0f
 ) {
     @get:Ignore
-    val overallScore: Float
-        get() = listOf(sweetness, smokiness, fruitiness, spice, body, finish)
-            .average()
-            .toFloat()
+    val effectiveOverallScore: Float
+        get() = overallScoreUser ?: overallScoreAuto
 
-    @get:Ignore
-    val flavorAttributes: Map<String, Float>
-        get() = mapOf(
-            "Sweetness" to sweetness,
-            "Smokiness" to smokiness,
-            "Fruitiness" to fruitiness,
-            "Spice" to spice,
-            "Body" to body,
-            "Finish" to finish
-        )
+    companion object {
+        fun computeOverallScoreAuto(nose: Float, palate: Float, finishVal: Float): Float =
+            0.3f * nose + 0.5f * palate + 0.2f * finishVal
+
+        fun roundToHalf(value: Float): Float =
+            (Math.round(value * 2.0) / 2.0).toFloat()
+    }
 }

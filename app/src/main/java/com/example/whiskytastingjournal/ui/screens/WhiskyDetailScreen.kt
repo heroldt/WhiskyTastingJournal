@@ -23,7 +23,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,7 +42,6 @@ import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.Whisky
 import com.example.whiskytastingjournal.model.WhiskyWithTastings
 import com.example.whiskytastingjournal.ui.TastingViewModel
-import com.example.whiskytastingjournal.ui.components.TastingWheel
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,14 +104,10 @@ fun WhiskyDetailScreen(
         }
     ) { padding ->
         if (wt == null) {
-            Text(
-                "Loading...",
-                modifier = Modifier.padding(padding).padding(16.dp)
-            )
+            Text("Loading...", modifier = Modifier.padding(padding).padding(16.dp))
         } else {
             val whisky = wt.whisky
             val tastings = wt.tastings.sortedByDescending { it.date }
-            val latestTasting = tastings.firstOrNull()
 
             LazyColumn(
                 modifier = Modifier
@@ -122,33 +116,12 @@ fun WhiskyDetailScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Whisky info header
-                item {
-                    Spacer(modifier = Modifier.height(0.dp))
-                    WhiskyInfoCard(whisky)
-                }
+                item { WhiskyInfoCard(whisky) }
 
-                // Tasting wheel showing average across all tastings
                 if (tastings.isNotEmpty()) {
-                    item {
-                        val avgAttributes = mapOf(
-                            "Sweetness" to tastings.map { it.sweetness }.average().toFloat(),
-                            "Smokiness" to tastings.map { it.smokiness }.average().toFloat(),
-                            "Fruitiness" to tastings.map { it.fruitiness }.average().toFloat(),
-                            "Spice" to tastings.map { it.spice }.average().toFloat(),
-                            "Body" to tastings.map { it.body }.average().toFloat(),
-                            "Finish" to tastings.map { it.finish }.average().toFloat()
-                        )
-                        DetailSection("Tasting Wheel (Average)") {
-                            TastingWheel(
-                                attributes = avgAttributes,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
+                    item { AverageScoresCard(tastings) }
                 }
 
-                // Tastings list header
                 item {
                     Text(
                         text = "Tastings (${tastings.size})",
@@ -189,14 +162,10 @@ fun WhiskyDetailScreen(
                     viewModel.deleteWhiskyById(whiskyId)
                     showDeleteDialog = false
                     onBack()
-                }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -206,15 +175,10 @@ fun WhiskyDetailScreen(
 private fun WhiskyInfoCard(whisky: Whisky) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = whisky.whiskyName,
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Text(text = whisky.whiskyName, style = MaterialTheme.typography.headlineMedium)
             Text(
                 text = whisky.distillery,
                 style = MaterialTheme.typography.titleMedium,
@@ -222,17 +186,20 @@ private fun WhiskyInfoCard(whisky: Whisky) {
             )
             if (whisky.region.isNotBlank() || whisky.country.isNotBlank()) {
                 Text(
-                    text = listOf(whisky.region, whisky.country)
-                        .filter { it.isNotBlank() }
-                        .joinToString(", "),
+                    text = listOf(whisky.region, whisky.country).filter { it.isNotBlank() }.joinToString(", "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (whisky.batchCode.isNotBlank()) {
+            val meta = buildList {
+                whisky.age?.let { add("${it}yo") }
+                whisky.bottlingYear?.let { add("Bottled $it") }
+                if (whisky.batchCode.isNotBlank()) add("Batch: ${whisky.batchCode}")
+            }.joinToString("  \u2022  ")
+            if (meta.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Batch: ${whisky.batchCode}",
+                    text = meta,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -242,32 +209,65 @@ private fun WhiskyInfoCard(whisky: Whisky) {
 }
 
 @Composable
-private fun TastingEntryCard(tasting: TastingEntry, onClick: () -> Unit) {
+private fun AverageScoresCard(tastings: List<TastingEntry>) {
+    val avgNose = tastings.map { it.noseScore }.average().toFloat()
+    val avgPalate = tastings.map { it.palateScore }.average().toFloat()
+    val avgFinish = tastings.map { it.finishScore }.average().toFloat()
+    val avgOverall = tastings.map { it.effectiveOverallScore }.average().toFloat()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Average Scores",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                ScoreColumn("Nose", avgNose)
+                ScoreColumn("Palate", avgPalate)
+                ScoreColumn("Finish", avgFinish)
+                ScoreColumn("Overall", avgOverall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreColumn(label: String, score: Float) {
+    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+        Text(
+            text = String.format("%.1f", TastingEntry.roundToHalf(score)),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+
+@Composable
+private fun TastingEntryCard(
+    tasting: TastingEntry,
+    onClick: () -> Unit
+) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = tasting.date.format(dateFormatter),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Text(text = tasting.date.format(dateFormatter), style = MaterialTheme.typography.titleMedium)
                     if (tasting.alias.isNotBlank()) {
                         Text(
                             text = tasting.alias,
@@ -276,13 +276,9 @@ private fun TastingEntryCard(tasting: TastingEntry, onClick: () -> Unit) {
                         )
                     }
                 }
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Text(
-                        text = String.format("%.1f", tasting.overallScore),
+                        text = String.format("%.1f", TastingEntry.roundToHalf(tasting.effectiveOverallScore)),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -290,7 +286,15 @@ private fun TastingEntryCard(tasting: TastingEntry, onClick: () -> Unit) {
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                ScoreLabel("Nose", tasting.noseScore)
+                ScoreLabel("Palate", tasting.palateScore)
+                ScoreLabel("Finish", tasting.finishScore)
+            }
+
             if (tasting.price.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "$${tasting.price}",
                     style = MaterialTheme.typography.labelMedium,
@@ -298,38 +302,20 @@ private fun TastingEntryCard(tasting: TastingEntry, onClick: () -> Unit) {
                 )
             }
 
-            if (tasting.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = tasting.notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                tasting.flavorAttributes.forEach { (label, value) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(text = label, style = MaterialTheme.typography.labelSmall)
-                        Text(
-                            text = String.format("%.0f", value),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    LinearProgressIndicator(
-                        progress = value / 10f,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+            // Notes preview (compact — full notes visible in edit screen)
+            listOf(
+                "Nose" to tasting.noseNotes,
+                "Palate" to tasting.palateNotes,
+                "Finish" to tasting.finishNotes
+            ).forEach { (label, notes) ->
+                if (!notes.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$label: $notes",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -338,14 +324,17 @@ private fun TastingEntryCard(tasting: TastingEntry, onClick: () -> Unit) {
 }
 
 @Composable
-private fun DetailSection(title: String, content: @Composable () -> Unit) {
-    Column {
+private fun ScoreLabel(label: String, score: Float) {
+    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
+            text = String.format("%.1f", TastingEntry.roundToHalf(score)),
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        content()
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

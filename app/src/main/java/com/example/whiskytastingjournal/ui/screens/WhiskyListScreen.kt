@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.WhiskyWithTastings
 import com.example.whiskytastingjournal.ui.SortOption
 import com.example.whiskytastingjournal.ui.TastingViewModel
@@ -169,7 +170,7 @@ private fun WhiskyCard(whiskyWithTastings: WhiskyWithTastings, onClick: () -> Un
     val tastings = whiskyWithTastings.tastings
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
     val latestTasting = tastings.maxByOrNull { it.date }
-    val bestScore = tastings.maxOfOrNull { it.overallScore }
+    val bestScore = tastings.maxOfOrNull { it.effectiveOverallScore }
 
     Card(
         modifier = Modifier
@@ -244,7 +245,7 @@ private fun ScoreBadge(score: Float) {
         )
     ) {
         Text(
-            text = String.format("%.1f", score),
+            text = String.format("%.1f", TastingEntry.roundToHalf(score)),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onPrimaryContainer

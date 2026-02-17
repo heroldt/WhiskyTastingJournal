@@ -1,7 +1,11 @@
 package com.example.whiskytastingjournal.repository
 
+import com.example.whiskytastingjournal.data.dao.AromaDao
 import com.example.whiskytastingjournal.data.dao.TastingDao
 import com.example.whiskytastingjournal.data.dao.WhiskyDao
+import com.example.whiskytastingjournal.model.AromaTag
+import com.example.whiskytastingjournal.model.DefaultAromaTags
+import com.example.whiskytastingjournal.model.TastingAroma
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.Whisky
 import com.example.whiskytastingjournal.model.WhiskyWithTastings
@@ -9,10 +13,11 @@ import kotlinx.coroutines.flow.Flow
 
 class TastingRepository(
     private val tastingDao: TastingDao,
-    private val whiskyDao: WhiskyDao
+    private val whiskyDao: WhiskyDao,
+    private val aromaDao: AromaDao
 ) {
 
-    // Whisky operations
+    // --- Whisky operations ---
     val allWhiskiesWithTastings: Flow<List<WhiskyWithTastings>> = whiskyDao.getAllWhiskiesWithTastings()
 
     suspend fun getWhiskyById(id: String): Whisky? = whiskyDao.getWhiskyById(id)
@@ -27,7 +32,7 @@ class TastingRepository(
 
     suspend fun deleteWhiskyById(id: String) = whiskyDao.deleteById(id)
 
-    // Tasting operations
+    // --- Tasting operations ---
     val allTastings: Flow<List<TastingEntry>> = tastingDao.getAllTastings()
 
     fun getTastingsByWhiskyId(whiskyId: String): Flow<List<TastingEntry>> =
@@ -45,4 +50,33 @@ class TastingRepository(
     suspend fun deleteTasting(tasting: TastingEntry) = tastingDao.delete(tasting)
 
     suspend fun deleteTastingById(id: String) = tastingDao.deleteById(id)
+
+    // --- Tasting + Aromas combined save ---
+    suspend fun saveTastingWithAromas(tasting: TastingEntry, aromas: List<TastingAroma>) {
+        tastingDao.insert(tasting)
+        aromaDao.clearAllTastingAromas(tasting.id)
+        if (aromas.isNotEmpty()) {
+            aromaDao.insertAllTastingAromas(aromas)
+        }
+    }
+
+    suspend fun updateTastingWithAromas(tasting: TastingEntry, aromas: List<TastingAroma>) {
+        tastingDao.update(tasting)
+        aromaDao.clearAllTastingAromas(tasting.id)
+        if (aromas.isNotEmpty()) {
+            aromaDao.insertAllTastingAromas(aromas)
+        }
+    }
+
+    // --- Aroma operations ---
+    val allAromaTags: Flow<List<AromaTag>> = aromaDao.getAllTags()
+
+    suspend fun getAromasForTasting(tastingId: String): List<TastingAroma> =
+        aromaDao.getAromasForTasting(tastingId)
+
+    suspend fun seedAromaTagsIfEmpty() {
+        if (aromaDao.getTagCount() == 0) {
+            aromaDao.insertAllTags(DefaultAromaTags.all())
+        }
+    }
 }
