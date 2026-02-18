@@ -56,6 +56,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +68,8 @@ fun AddTastingScreen(
 ) {
     val scope = rememberCoroutineScope()
     val allTags by viewModel.aromaTags.collectAsState()
+
+    val newTastingId = remember { UUID.randomUUID().toString() }
 
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var alias by remember { mutableStateOf("") }
@@ -95,7 +98,7 @@ fun AddTastingScreen(
     if (!overallManualEdited) overallManual = autoScore
 
     fun buildEntry(id: String? = null): TastingEntry = TastingEntry(
-        id = id ?: TastingEntry().id,
+        id = id ?: newTastingId,
         whiskyId = whiskyId,
         date = selectedDate,
         alias = alias,
@@ -248,60 +251,45 @@ fun AddTastingScreen(
                 ScoreSlider(
                     label = "Your Overall Score",
                     value = overallManual,
-                    onValueChange = {
-                        overallManual = it
-                        overallManualEdited = true
-                    }
+                    onValueChange = { overallManual = it; overallManualEdited = true }
                 )
                 if (overallManualEdited) {
-                    TextButton(onClick = {
-                        overallManualEdited = false
-                        overallManual = autoScore
-                    }) { Text("Reset to auto") }
+                    TextButton(onClick = { overallManualEdited = false; overallManual = autoScore }) {
+                        Text("Reset to auto")
+                    }
                 }
             }
 
-            // --- Save / Cancel ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                    Text("Cancel")
-                }
-                Button(onClick = { trySave() }, modifier = Modifier.weight(1f)) {
-                    Text("Save")
-                }
+                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                Button(onClick = { trySave() }, modifier = Modifier.weight(1f)) { Text("Save") }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // --- Date picker dialog ---
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate
-                .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        selectedDate = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.systemDefault()).toLocalDate()
+                        selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
                     }
                     showDatePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
         ) { DatePicker(state = datePickerState) }
     }
 
-    // --- Duplicate dialog ---
     if (showDuplicateDialog) {
         AlertDialog(
             onDismissRequest = { showDuplicateDialog = false },
@@ -332,7 +320,7 @@ fun AddTastingScreen(
     }
 }
 
-// --- Shared composables (used by AddTastingScreen and EditTastingScreen) ---
+// --- Shared composables ---
 
 @Composable
 internal fun SectionCard(title: String, content: @Composable () -> Unit) {
@@ -345,22 +333,14 @@ internal fun SectionCard(title: String, content: @Composable () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Text(text = title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             content()
         }
     }
 }
 
 @Composable
-internal fun ScoreSlider(
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit
-) {
+internal fun ScoreSlider(label: String, value: Float, onValueChange: (Float) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),

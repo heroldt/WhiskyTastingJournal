@@ -2,6 +2,7 @@ package com.example.whiskytastingjournal.navigation
 
 sealed class NavRoutes(val route: String) {
     data object WhiskyList : NavRoutes("whisky_list")
+    data object Statistics : NavRoutes("statistics")
     data object AddWhisky : NavRoutes("add_whisky")
     data object WhiskyDetail : NavRoutes("whisky_detail/{whiskyId}") {
         fun withId(id: String) = "whisky_detail/$id"

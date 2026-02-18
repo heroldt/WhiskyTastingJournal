@@ -36,10 +36,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.Whisky
+import java.io.File
 import com.example.whiskytastingjournal.model.WhiskyWithTastings
 import com.example.whiskytastingjournal.ui.TastingViewModel
 import java.time.format.DateTimeFormatter
@@ -177,6 +180,16 @@ private fun WhiskyInfoCard(whisky: Whisky) {
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
+        whisky.photoPath?.let { path ->
+            AsyncImage(
+                model = File(path),
+                contentDescription = "Bottle photo",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp),
+                contentScale = ContentScale.Crop
+            )
+        }
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = whisky.whiskyName, style = MaterialTheme.typography.headlineMedium)
             Text(

@@ -3,8 +3,15 @@ package com.example.whiskytastingjournal.repository
 import com.example.whiskytastingjournal.data.dao.AromaDao
 import com.example.whiskytastingjournal.data.dao.TastingDao
 import com.example.whiskytastingjournal.data.dao.WhiskyDao
+import android.content.Context
+import android.net.Uri
 import com.example.whiskytastingjournal.model.AromaTag
+import com.example.whiskytastingjournal.model.AromaTagCount
 import com.example.whiskytastingjournal.model.DefaultAromaTags
+import com.example.whiskytastingjournal.util.ExportManager
+import com.example.whiskytastingjournal.util.ImportManager
+import com.example.whiskytastingjournal.util.ImportResult
+import java.io.File
 import com.example.whiskytastingjournal.model.TastingAroma
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.Whisky
@@ -71,8 +78,17 @@ class TastingRepository(
     // --- Aroma operations ---
     val allAromaTags: Flow<List<AromaTag>> = aromaDao.getAllTags()
 
+    val topAromaTags: Flow<List<AromaTagCount>> = aromaDao.getTopAromaTagCounts()
+
     suspend fun getAromasForTasting(tastingId: String): List<TastingAroma> =
         aromaDao.getAromasForTasting(tastingId)
+
+    // --- Export / Import ---
+    suspend fun exportToZip(context: Context): File =
+        ExportManager(context, whiskyDao, tastingDao, aromaDao).exportToZip()
+
+    suspend fun importFromZip(context: Context, uri: Uri): ImportResult =
+        ImportManager(context, whiskyDao, tastingDao, aromaDao).importFromZip(uri)
 
     suspend fun seedAromaTagsIfEmpty() {
         if (aromaDao.getTagCount() == 0) {

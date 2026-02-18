@@ -55,7 +55,8 @@ import java.time.format.DateTimeFormatter
 fun WhiskyListScreen(
     viewModel: TastingViewModel,
     onAddWhisky: () -> Unit,
-    onWhiskyClick: (String) -> Unit
+    onWhiskyClick: (String) -> Unit,
+    bottomBar: @Composable () -> Unit = {}
 ) {
     val whiskies by viewModel.whiskiesWithTastings.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -65,6 +66,7 @@ fun WhiskyListScreen(
     var showSortMenu by remember { mutableStateOf(false) }
 
     Scaffold(
+        bottomBar = bottomBar,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {

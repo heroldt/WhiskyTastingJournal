@@ -1,10 +1,15 @@
 package com.example.whiskytastingjournal.ui
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.whiskytastingjournal.model.AromaTag
+import com.example.whiskytastingjournal.model.AromaTagCount
 import com.example.whiskytastingjournal.model.TastingAroma
+import com.example.whiskytastingjournal.util.ImportResult
+import java.io.File
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.model.Whisky
 import com.example.whiskytastingjournal.model.WhiskyWithTastings
@@ -35,6 +40,13 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
     val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
     val aromaTags: StateFlow<List<AromaTag>> = repository.allAromaTags
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Unfiltered — used by statistics (not affected by search/sort)
+    val allWhiskiesUnfiltered: StateFlow<List<WhiskyWithTastings>> = repository.allWhiskiesWithTastings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val topAromaTags: StateFlow<List<AromaTagCount>> = repository.topAromaTags
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -132,6 +144,46 @@ class TastingViewModel(private val repository: TastingRepository) : ViewModel() 
     // --- Aroma queries ---
     suspend fun getAromasForTasting(tastingId: String): List<TastingAroma> =
         repository.getAromasForTasting(tastingId)
+
+    // --- Export / Import ---
+    sealed class ExportImportState {
+        object Idle : ExportImportState()
+        object Loading : ExportImportState()
+        data class ExportReady(val file: File) : ExportImportState()
+        data class ImportDone(val result: ImportResult) : ExportImportState()
+        data class Error(val message: String) : ExportImportState()
+    }
+
+    private val _exportImportState = MutableStateFlow<ExportImportState>(ExportImportState.Idle)
+    val exportImportState: StateFlow<ExportImportState> = _exportImportState.asStateFlow()
+
+    fun exportData(context: Context) {
+        viewModelScope.launch {
+            _exportImportState.value = ExportImportState.Loading
+            try {
+                val file = repository.exportToZip(context.applicationContext)
+                _exportImportState.value = ExportImportState.ExportReady(file)
+            } catch (e: Exception) {
+                _exportImportState.value = ExportImportState.Error(e.message ?: "Export failed")
+            }
+        }
+    }
+
+    fun importData(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _exportImportState.value = ExportImportState.Loading
+            try {
+                val result = repository.importFromZip(context.applicationContext, uri)
+                _exportImportState.value = ExportImportState.ImportDone(result)
+            } catch (e: Exception) {
+                _exportImportState.value = ExportImportState.Error(e.message ?: "Import failed")
+            }
+        }
+    }
+
+    fun clearExportImportState() {
+        _exportImportState.value = ExportImportState.Idle
+    }
 
     class Factory(private val repository: TastingRepository) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

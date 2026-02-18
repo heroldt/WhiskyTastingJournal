@@ -18,7 +18,7 @@ import com.example.whiskytastingjournal.model.Whisky
 
 @Database(
     entities = [Whisky::class, TastingEntry::class, AromaTag::class, TastingAroma::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -72,6 +72,13 @@ abstract class TastingDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE whiskies ADD COLUMN photoPath TEXT")
+                db.execSQL("ALTER TABLE tastings ADD COLUMN bottlePhotoPath TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): TastingDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -79,7 +86,7 @@ abstract class TastingDatabase : RoomDatabase() {
                     TastingDatabase::class.java,
                     "whisky_tasting_db"
                 )
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }

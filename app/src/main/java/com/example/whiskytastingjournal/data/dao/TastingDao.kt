@@ -35,4 +35,7 @@ interface TastingDao {
 
     @Query("DELETE FROM tastings WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM tastings")
+    suspend fun getAllTastingsOnce(): List<TastingEntry>
 }

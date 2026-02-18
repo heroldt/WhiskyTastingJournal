@@ -39,4 +39,11 @@ interface WhiskyDao {
 
     @Query("DELETE FROM whiskies WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM whiskies")
+    suspend fun getAllWhiskiesOnce(): List<Whisky>
+
+    @Transaction
+    @Query("SELECT * FROM whiskies ORDER BY whiskyName ASC")
+    suspend fun getAllWhiskiesWithTastingsOnce(): List<WhiskyWithTastings>
 }

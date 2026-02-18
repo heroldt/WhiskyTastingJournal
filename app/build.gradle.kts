@@ -76,6 +76,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
 
+    // JSON serialization for export/import
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    // Image loading (bottle photo thumbnails)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

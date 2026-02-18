@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Photos taken in-app: context.getExternalFilesDir("photos") -->
+    <external-files-path name="photos" path="photos/" />
+    <!-- Export ZIPs: context.getExternalFilesDir("backups") -->
+    <external-files-path name="backups" path="backups/" />
+</paths>

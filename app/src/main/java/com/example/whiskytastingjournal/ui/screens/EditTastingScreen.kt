@@ -49,6 +49,7 @@ import com.example.whiskytastingjournal.model.TastingAroma
 import com.example.whiskytastingjournal.model.TastingEntry
 import com.example.whiskytastingjournal.ui.TastingViewModel
 import com.example.whiskytastingjournal.ui.components.AromaTagSelector
+import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -125,9 +126,7 @@ fun EditTastingScreen(
             TopAppBar(
                 title = { Text("Edit Tasting", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
-                    IconButton(onClick = onCancel) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+                    IconButton(onClick = onCancel) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
@@ -144,10 +143,9 @@ fun EditTastingScreen(
         }
     ) { padding ->
         if (!loaded) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) { Text("Loading...") }
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("Loading...")
+            }
         } else {
             Column(
                 modifier = Modifier
@@ -189,6 +187,7 @@ fun EditTastingScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         prefix = { Text("$") }
                     )
+
                 }
 
                 // --- Nose ---
@@ -250,27 +249,20 @@ fun EditTastingScreen(
                     ScoreSlider(
                         label = "Your Overall Score",
                         value = overallManual,
-                        onValueChange = {
-                            overallManual = it
-                            overallManualEdited = true
-                        }
+                        onValueChange = { overallManual = it; overallManualEdited = true }
                     )
                     if (overallManualEdited) {
-                        TextButton(onClick = {
-                            overallManualEdited = false
-                            overallManual = autoScore
-                        }) { Text("Reset to auto") }
+                        TextButton(onClick = { overallManualEdited = false; overallManual = autoScore }) {
+                            Text("Reset to auto")
+                        }
                     }
                 }
 
-                // --- Save / Cancel ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                        Text("Cancel")
-                    }
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Cancel") }
                     Button(
                         onClick = {
                             originalEntry?.let { orig ->
@@ -300,30 +292,24 @@ fun EditTastingScreen(
         }
     }
 
-    // --- Date picker ---
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate
-                .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        selectedDate = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.systemDefault()).toLocalDate()
+                        selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
                     }
                     showDatePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
         ) { DatePicker(state = datePickerState) }
     }
 
-    // --- Delete dialog ---
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -336,9 +322,7 @@ fun EditTastingScreen(
                     onSaved()
                 }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
         )
     }
 }

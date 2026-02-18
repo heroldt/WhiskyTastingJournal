@@ -1,5 +1,9 @@
 package com.example.whiskytastingjournal.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,11 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,16 +37,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.example.whiskytastingjournal.model.Distillery
 import com.example.whiskytastingjournal.model.Whisky
 import com.example.whiskytastingjournal.ui.TastingViewModel
 import com.example.whiskytastingjournal.ui.components.DistilleryField
+import com.example.whiskytastingjournal.util.scaleDownPhoto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +68,44 @@ fun EditWhiskyScreen(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val allDistilleries = remember { Distillery.loadAll(context) }
+
+    val photoDir = remember { context.getExternalFilesDir("photos")?.also { it.mkdirs() } }
+    val photoFile = remember { File(photoDir ?: context.filesDir, "${whiskyId}_bottle.jpg") }
+    val photoUri = remember {
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+    }
+    var photoPath by remember { mutableStateOf<String?>(null) }
+    var cameraPermissionDenied by remember { mutableStateOf(false) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            scope.launch {
+                withContext(Dispatchers.IO) { scaleDownPhoto(photoFile) }
+                photoPath = photoFile.absolutePath
+            }
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            cameraPermissionDenied = false
+            cameraLauncher.launch(photoUri)
+        } else {
+            cameraPermissionDenied = true
+        }
+    }
+
+    fun launchCamera() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            cameraPermissionDenied = false
+            cameraLauncher.launch(photoUri)
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
 
     var loaded by remember { mutableStateOf(false) }
     var originalWhisky by remember { mutableStateOf<Whisky?>(null) }
@@ -73,6 +128,7 @@ fun EditWhiskyScreen(
             batchCode = whisky.batchCode
             ageStr = whisky.age?.toString() ?: ""
             bottlingYearStr = whisky.bottlingYear?.toString() ?: ""
+            photoPath = whisky.photoPath
             loaded = true
         }
     }
@@ -180,19 +236,43 @@ fun EditWhiskyScreen(
                     )
                 }
 
+                // Bottle photo
+                OutlinedButton(
+                    onClick = { launchCamera() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (photoPath != null) "Retake Bottle Photo" else "Take Bottle Photo")
+                }
+                if (cameraPermissionDenied) {
+                    Text(
+                        text = "Camera permission denied. Enable it in system settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                photoPath?.let { path ->
+                    AsyncImage(
+                        model = File(path),
+                        contentDescription = "Bottle photo",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = onCancel,
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
                         Text("Cancel")
                     }
-
                     Button(
                         onClick = {
                             originalWhisky?.let { orig ->
@@ -204,7 +284,8 @@ fun EditWhiskyScreen(
                                         whiskyName = whiskyName,
                                         batchCode = batchCode,
                                         age = ageStr.toIntOrNull(),
-                                        bottlingYear = bottlingYearStr.toIntOrNull()
+                                        bottlingYear = bottlingYearStr.toIntOrNull(),
+                                        photoPath = photoPath
                                     )
                                 )
                             }

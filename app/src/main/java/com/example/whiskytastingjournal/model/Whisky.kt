@@ -14,5 +14,6 @@ data class Whisky(
     val whiskyName: String = "",
     val batchCode: String = "",
     val age: Int? = null,
-    val bottlingYear: Int? = null
+    val bottlingYear: Int? = null,
+    val photoPath: String? = null
 )

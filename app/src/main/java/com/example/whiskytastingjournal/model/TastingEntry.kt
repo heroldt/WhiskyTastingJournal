@@ -40,6 +40,9 @@ data class TastingEntry(
     val palateNotes: String? = null,
     val finishNotes: String? = null,
 
+    // --- Bottle photo (absolute path on device) ---
+    val bottlePhotoPath: String? = null,
+
     // --- Legacy columns kept for migration compat (unused in new UI) ---
     val notes: String = "",
     val sweetness: Float = 0f,
