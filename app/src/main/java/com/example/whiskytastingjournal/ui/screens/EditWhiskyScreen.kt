@@ -117,6 +117,8 @@ fun EditWhiskyScreen(
     var batchCode by remember { mutableStateOf("") }
     var ageStr by remember { mutableStateOf("") }
     var bottlingYearStr by remember { mutableStateOf("") }
+    var abvStr by remember { mutableStateOf("") }
+    var caskType by remember { mutableStateOf("") }
 
     LaunchedEffect(whiskyId) {
         viewModel.getWhiskyById(whiskyId)?.let { whisky ->
@@ -128,6 +130,8 @@ fun EditWhiskyScreen(
             batchCode = whisky.batchCode
             ageStr = whisky.age?.toString() ?: ""
             bottlingYearStr = whisky.bottlingYear?.toString() ?: ""
+            abvStr = whisky.abv?.toString() ?: ""
+            caskType = whisky.caskType ?: ""
             photoPath = whisky.photoPath
             loaded = true
         }
@@ -236,6 +240,33 @@ fun EditWhiskyScreen(
                     )
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = abvStr,
+                        onValueChange = { v ->
+                            val filtered = v.filter { c -> c.isDigit() || c == '.' }
+                            if (filtered.count { it == '.' } <= 1) abvStr = filtered
+                        },
+                        label = { Text("ABV") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        suffix = { Text("%") },
+                        placeholder = { Text("optional") }
+                    )
+                    OutlinedTextField(
+                        value = caskType,
+                        onValueChange = { caskType = it },
+                        label = { Text("Cask Type") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        placeholder = { Text("optional") }
+                    )
+                }
+
                 // Bottle photo
                 OutlinedButton(
                     onClick = { launchCamera() },
@@ -285,6 +316,8 @@ fun EditWhiskyScreen(
                                         batchCode = batchCode,
                                         age = ageStr.toIntOrNull(),
                                         bottlingYear = bottlingYearStr.toIntOrNull(),
+                                        abv = abvStr.toFloatOrNull(),
+                                        caskType = caskType.trim().ifBlank { null },
                                         photoPath = photoPath
                                     )
                                 )

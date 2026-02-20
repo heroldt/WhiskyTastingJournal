@@ -18,6 +18,8 @@ data class ExportWhisky(
     val batchCode: String,
     val age: Int?,
     val bottlingYear: Int?,
+    val abv: Float? = null,
+    val caskType: String? = null,
     val tastings: List<ExportTasting>
 )
 

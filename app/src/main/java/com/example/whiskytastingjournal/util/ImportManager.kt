@@ -102,7 +102,9 @@ class ImportManager(
                             region = ew.region,
                             batchCode = ew.batchCode,
                             age = ew.age,
-                            bottlingYear = ew.bottlingYear
+                            bottlingYear = ew.bottlingYear,
+                            abv = ew.abv,
+                            caskType = ew.caskType
                         )
                     )
                     whiskyId = ew.id

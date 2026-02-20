@@ -207,6 +207,8 @@ private fun WhiskyInfoCard(whisky: Whisky) {
             val meta = buildList {
                 whisky.age?.let { add("${it}yo") }
                 whisky.bottlingYear?.let { add("Bottled $it") }
+                whisky.abv?.let { add("${it}% ABV") }
+                whisky.caskType?.let { if (it.isNotBlank()) add(it) }
                 if (whisky.batchCode.isNotBlank()) add("Batch: ${whisky.batchCode}")
             }.joinToString("  \u2022  ")
             if (meta.isNotBlank()) {

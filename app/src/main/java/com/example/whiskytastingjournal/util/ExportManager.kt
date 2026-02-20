@@ -71,6 +71,8 @@ class ExportManager(
                 batchCode = wt.whisky.batchCode,
                 age = wt.whisky.age,
                 bottlingYear = wt.whisky.bottlingYear,
+                abv = wt.whisky.abv,
+                caskType = wt.whisky.caskType,
                 tastings = exportTastings
             )
         }
